@@ -20,18 +20,18 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.textfield.TextInputEditText;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Locale;
 
 public class ProfileSetupActivity extends AppCompatActivity {
 
     TextInputEditText etFullname, etBirthday, etNewHabitName, etNewHabitDesc;
     LinearLayout llHabitInput, llHabitsList;
     Button btnAddHabit, btnSaveHabit, btnContinue;
+
     ImageView ivProfilePhoto;
     TextView tvPickPhoto;
+
     ChipGroup chipGroupGender, chipGroupGoal;
 
     private String selectedGender = "";
@@ -40,11 +40,47 @@ public class ProfileSetupActivity extends AppCompatActivity {
     private String pickedGalleryUri = "";
 
     SharedPreferences prefs;
-
     ArrayList<String> habitNames = new ArrayList<>();
     ArrayList<String> habitDescs = new ArrayList<>();
 
-    private ActivityResultLauncher<Intent> avatarPickerLauncher;
+    private String currentUserEmail = "";
+
+    private final ActivityResultLauncher<Intent> avatarPickerLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.StartActivityForResult(),
+                    result -> {
+                        if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                            Intent data = result.getData();
+
+                            String resName = data.getStringExtra(AvatarPicker.EXTRA_AVATAR_RES_NAME);
+                            String galleryUri = data.getStringExtra(AvatarPicker.EXTRA_GALLERY_URI);
+
+                            if (resName != null && !resName.isEmpty()) {
+                                pickedAvatarResName = resName;
+                                pickedGalleryUri = "";
+
+                                int resId = getResources().getIdentifier(resName, "drawable", getPackageName());
+                                if (resId != 0) {
+                                    ivProfilePhoto.setImageResource(resId);
+                                    ivProfilePhoto.setPadding(0, 0, 0, 0);
+                                    ivProfilePhoto.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                                }
+                                tvPickPhoto.setText("Tap to change avatar");
+                            } else if (galleryUri != null && !galleryUri.isEmpty()) {
+                                pickedGalleryUri = galleryUri;
+                                pickedAvatarResName = "";
+                                try {
+                                    ivProfilePhoto.setImageURI(Uri.parse(galleryUri));
+                                    ivProfilePhoto.setPadding(0, 0, 0, 0);
+                                    ivProfilePhoto.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                                    tvPickPhoto.setText("Tap to change photo");
+                                } catch (Exception e) {
+                                    Toast.makeText(this, "Unable to load gallery photo", Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        }
+                    }
+            );
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,6 +88,7 @@ public class ProfileSetupActivity extends AppCompatActivity {
         setContentView(R.layout.activity_profile_setup);
 
         prefs = getSharedPreferences("HabitKit", MODE_PRIVATE);
+        currentUserEmail = prefs.getString("current_user_email", "");
 
         etFullname = findViewById(R.id.et_fullname);
         etBirthday = findViewById(R.id.et_birthday);
@@ -66,8 +103,6 @@ public class ProfileSetupActivity extends AppCompatActivity {
         tvPickPhoto = findViewById(R.id.tv_pick_photo);
         chipGroupGender = findViewById(R.id.chip_group_gender);
         chipGroupGoal = findViewById(R.id.chip_group_goal);
-
-        setupAvatarLauncher();
 
         View.OnClickListener openAvatarPicker = v -> {
             Intent intent = new Intent(this, AvatarPicker.class);
@@ -113,12 +148,13 @@ public class ProfileSetupActivity extends AppCompatActivity {
                 etNewHabitName.setError("Please enter a habit name");
                 return;
             }
+
             habitNames.add(name);
             habitDescs.add(desc);
 
             TextView habitChip = new TextView(this);
             habitChip.setText("✓ " + name);
-            habitChip.setTextColor(getResources().getColor(R.color.dark_green, getTheme()));
+            habitChip.setTextColor(getResources().getColor(R.color.dark_green));
             habitChip.setTextSize(14);
             habitChip.setPadding(16, 12, 16, 12);
             habitChip.setBackgroundResource(R.drawable.card_soft_white);
@@ -139,52 +175,19 @@ public class ProfileSetupActivity extends AppCompatActivity {
         btnContinue.setOnClickListener(v -> saveAndContinue());
     }
 
-    private void setupAvatarLauncher() {
-        avatarPickerLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        Intent data = result.getData();
-                        String resName = data.getStringExtra(AvatarPicker.EXTRA_AVATAR_RES_NAME);
-                        String galleryUri = data.getStringExtra(AvatarPicker.EXTRA_GALLERY_URI);
-
-                        if (resName != null && !resName.isEmpty()) {
-                            pickedAvatarResName = resName;
-                            pickedGalleryUri = "";
-                            int resId = getResources().getIdentifier(resName, "drawable", getPackageName());
-                            if (resId != 0) {
-                                ivProfilePhoto.setImageResource(resId);
-                                ivProfilePhoto.setPadding(0, 0, 0, 0);
-                                ivProfilePhoto.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                            }
-                            tvPickPhoto.setText("Tap to change avatar");
-                        } else if (galleryUri != null && !galleryUri.isEmpty()) {
-                            pickedGalleryUri = galleryUri;
-                            pickedAvatarResName = "";
-                            try {
-                                ivProfilePhoto.setImageURI(Uri.parse(galleryUri));
-                                ivProfilePhoto.setPadding(0, 0, 0, 0);
-                                ivProfilePhoto.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                                tvPickPhoto.setText("Tap to change photo");
-                            } catch (Exception e) {
-                                Toast.makeText(this, "Unable to load gallery photo", Toast.LENGTH_SHORT).show();
-                            }
-                        }
-                    }
-                }
-        );
-    }
-
     void saveAndContinue() {
         String fullname = etFullname.getText().toString().trim();
+        String birthday = etBirthday.getText() != null ? etBirthday.getText().toString().trim() : "";
+
         if (fullname.isEmpty()) {
             etFullname.setError("Please enter your name");
             return;
         }
 
         SharedPreferences.Editor editor = prefs.edit();
+        editor.putString("current_user_email", currentUserEmail);
         editor.putString("name", fullname);
-        editor.putString("birthday", etBirthday.getText() != null ? etBirthday.getText().toString() : "");
+        editor.putString("birthday", birthday);
         editor.putString("gender", selectedGender);
         editor.putString("goal", selectedGoal);
         editor.putBoolean("profile_setup_done", true);
@@ -197,22 +200,23 @@ public class ProfileSetupActivity extends AppCompatActivity {
 
         DatabaseHelper db = new DatabaseHelper(this);
         db.saveUser(
+                currentUserEmail,
                 fullname,
-                etBirthday.getText() != null ? etBirthday.getText().toString() : "",
+                birthday,
                 selectedGender,
                 selectedGoal,
                 pickedAvatarResName,
                 pickedGalleryUri
         );
 
-        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                .format(new java.util.Date());
+        String today = new java.text.SimpleDateFormat(
+                "yyyy-MM-dd", java.util.Locale.getDefault()
+        ).format(new java.util.Date());
 
         for (int i = 0; i < habitNames.size(); i++) {
-            db.addHabit(habitNames.get(i), habitDescs.get(i), "Health", "Daily", today);
+            db.addHabit(currentUserEmail, habitNames.get(i), habitDescs.get(i), "Health", "Daily", today);
         }
 
-        Toast.makeText(this, "Welcome, " + fullname + "!", Toast.LENGTH_SHORT).show();
         Intent intent = new Intent(this, WelcomeActivity.class);
         startActivity(intent);
         finish();
