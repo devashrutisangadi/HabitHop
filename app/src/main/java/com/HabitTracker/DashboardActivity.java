@@ -33,7 +33,6 @@ public class DashboardActivity extends AppCompatActivity {
 
     private TextView tvUserName;
     private ImageView profileImage;
-    private RewardManager rewardManager;
     private LinearLayout navHome, navJournal, navAdd, navReminders, navProfile;
     private TextView tvStreakCount, tvStreakMessage, tvTasksDone, tvTasksDue;
     private TextView dayMon, dayTue, dayWed, dayThu, dayFri, daySat, daySun;
@@ -48,13 +47,21 @@ public class DashboardActivity extends AppCompatActivity {
     private DatabaseHelper dbHelper;
 
     private final int[] stepViewIds = {
-            R.id.profileImage, R.id.navHome, R.id.navJournal,
-            R.id.navAdd, R.id.navReminders, R.id.navProfile
+            R.id.profileImage,
+            R.id.navHome,
+            R.id.navJournal,
+            R.id.navAdd,
+            R.id.navReminders,
+            R.id.navProfile
     };
 
     private final String[] stepTitles = {
-            "Your Profile 👤", "Home Dashboard 🏠", "Journal ✍️",
-            "Add a Habit ➕", "Reminders 🔔", "Profile Settings ⚙️"
+            "Your Profile 👤",
+            "Home Dashboard 🏠",
+            "Journal ✍️",
+            "Add a Habit ➕",
+            "Reminders 🔔",
+            "Profile Settings ⚙️"
     };
 
     private final String[] stepDescs = {
@@ -71,7 +78,6 @@ public class DashboardActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.dashboard);
 
-        rewardManager = new RewardManager(this);
         prefs    = getSharedPreferences("HabitKit", MODE_PRIVATE);
         dbHelper = new DatabaseHelper(this);
 
@@ -146,7 +152,6 @@ public class DashboardActivity extends AppCompatActivity {
         int percent = total == 0 ? 0 : (done * 100) / total;
         progressHabits.setProgress(percent);
 
-        // RESTORED EMOJIS HERE
         String emoji, message;
         if (percent == 0) {
             emoji = "😴"; message = "Wake up! Let's start your habits!";
@@ -191,7 +196,6 @@ public class DashboardActivity extends AppCompatActivity {
         if (!habits.isEmpty()) streak = dbHelper.getStreak(habits.get(0).getId());
         tvStreakCount.setText(String.valueOf(streak));
 
-        // RESTORED EMOJIS HERE
         if (streak == 0)     tvStreakMessage.setText("Start your streak today! 💪");
         else if (streak < 3) tvStreakMessage.setText("Good start, keep going!");
         else if (streak < 7) tvStreakMessage.setText("You are doing great! 🔥");
@@ -231,29 +235,9 @@ public class DashboardActivity extends AppCompatActivity {
         habitAdapter = new HabitAdapter(this, new ArrayList<>(), () -> {
             updateProgress();
             updateStreak();
-
-            // SMART TRIGGER: Check if ALL tasks are completed
-            checkAndShowReward();
         });
         recyclerHabits.setLayoutManager(new LinearLayoutManager(this));
         recyclerHabits.setAdapter(habitAdapter);
-    }
-
-    private void checkAndShowReward() {
-        List<Habit> habits = dbHelper.getAllHabitsList();
-        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                .format(new java.util.Date());
-
-        int total = habits.size();
-        int done = 0;
-        for (Habit h : habits) {
-            if (dbHelper.isHabitDoneToday(h.getId(), today)) done++;
-        }
-
-        // Only show if there are habits AND all of them are finished
-        if (total > 0 && done == total) {
-            rewardManager.showReward();
-        }
     }
 
     private void loadUserData() {
@@ -296,7 +280,10 @@ public class DashboardActivity extends AppCompatActivity {
         );
     }
 
-    // [ONBOARDING METHODS REMAIN THE SAME...]
+    // ════════════════════════════════════════════════════════════════
+    //  ONBOARDING TOUR
+    // ════════════════════════════════════════════════════════════════
+
     private void startOnboarding() {
         currentStep = 0;
         onboardingOverlay = new FrameLayout(this);
@@ -312,22 +299,29 @@ public class DashboardActivity extends AppCompatActivity {
 
     private void showStep(int step) {
         onboardingOverlay.removeAllViews();
+
         View targetView = findViewById(stepViewIds[step]);
         if (targetView == null) { nextStep(); return; }
+
         int[] loc = new int[2];
         targetView.getLocationOnScreen(loc);
-        int cx = loc[0] + targetView.getWidth() / 2;
-        int cy = loc[1] + targetView.getHeight() / 2;
+        int cx     = loc[0] + targetView.getWidth() / 2;
+        int cy     = loc[1] + targetView.getHeight() / 2;
         int radius = Math.max(targetView.getWidth(), targetView.getHeight()) / 2 + 40;
+
         Spotlightview spotlight = new Spotlightview(this, cx, cy, radius);
         spotlight.setLayoutParams(new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+        ));
         onboardingOverlay.addView(spotlight);
+
         LinearLayout tooltip = new LinearLayout(this);
         tooltip.setOrientation(LinearLayout.VERTICAL);
         tooltip.setBackgroundColor(Color.WHITE);
         tooltip.setPadding(56, 48, 56, 48);
         tooltip.setElevation(24f);
+
         LinearLayout dotsRow = new LinearLayout(this);
         dotsRow.setOrientation(LinearLayout.HORIZONTAL);
         dotsRow.setPadding(0, 0, 0, 20);
@@ -335,13 +329,19 @@ public class DashboardActivity extends AppCompatActivity {
             TextView dot = new TextView(this);
             dot.setText("●");
             dot.setTextSize(10f);
-            dot.setTextColor(i == step ? Color.parseColor("#2D6A4F") : Color.parseColor("#CCCCCC"));
-            LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(-2, -2);
+            dot.setTextColor(i == step
+                    ? Color.parseColor("#2D6A4F")
+                    : Color.parseColor("#CCCCCC"));
+            LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
             dp.setMargins(0, 0, 8, 0);
             dot.setLayoutParams(dp);
             dotsRow.addView(dot);
         }
         tooltip.addView(dotsRow);
+
         TextView tvTitle = new TextView(this);
         tvTitle.setText(stepTitles[step]);
         tvTitle.setTextColor(Color.parseColor("#1F1A17"));
@@ -349,6 +349,7 @@ public class DashboardActivity extends AppCompatActivity {
         tvTitle.setTypeface(null, Typeface.BOLD);
         tvTitle.setPadding(0, 0, 0, 12);
         tooltip.addView(tvTitle);
+
         TextView tvDesc = new TextView(this);
         tvDesc.setText(stepDescs[step]);
         tvDesc.setTextColor(Color.parseColor("#6F5B5B"));
@@ -356,16 +357,22 @@ public class DashboardActivity extends AppCompatActivity {
         tvDesc.setLineSpacing(6f, 1f);
         tvDesc.setPadding(0, 0, 0, 32);
         tooltip.addView(tvDesc);
+
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
         btnRow.setGravity(Gravity.CENTER_VERTICAL);
+
         TextView btnSkip = new TextView(this);
         btnSkip.setText("Skip tour");
         btnSkip.setTextColor(Color.parseColor("#8A817C"));
         btnSkip.setTextSize(14f);
-        btnSkip.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1f));
+        LinearLayout.LayoutParams skipParams = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+        );
+        btnSkip.setLayoutParams(skipParams);
         btnSkip.setOnClickListener(v -> finishOnboarding());
         btnRow.addView(btnSkip);
+
         boolean isLast = (step == stepViewIds.length - 1);
         Button btnNext = new Button(this);
         btnNext.setText(isLast ? "Done 🎉" : "Next  →");
@@ -374,16 +381,29 @@ public class DashboardActivity extends AppCompatActivity {
         btnNext.setTextSize(14f);
         btnNext.setTypeface(null, Typeface.BOLD);
         btnNext.setPadding(48, 16, 48, 16);
-        btnNext.setOnClickListener(v -> { if (isLast) finishOnboarding(); else nextStep(); });
+        btnNext.setOnClickListener(v -> {
+            if (isLast) finishOnboarding();
+            else nextStep();
+        });
         btnRow.addView(btnNext);
         tooltip.addView(btnRow);
-        FrameLayout.LayoutParams tooltipParams = new FrameLayout.LayoutParams(-1, -2);
+
+        FrameLayout.LayoutParams tooltipParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
         tooltipParams.gravity = Gravity.BOTTOM;
+
         int screenHeight = getResources().getDisplayMetrics().heightPixels;
-        if (cy > screenHeight * 2 / 3) tooltipParams.bottomMargin = screenHeight - cy + radius + 16;
-        else tooltipParams.bottomMargin = 0;
+        if (cy > screenHeight * 2 / 3) {
+            tooltipParams.bottomMargin = screenHeight - cy + radius + 16;
+        } else {
+            tooltipParams.bottomMargin = 0;
+        }
+
         tooltip.setLayoutParams(tooltipParams);
         onboardingOverlay.addView(tooltip);
+
         tooltip.setTranslationY(60f);
         tooltip.setAlpha(0f);
         tooltip.animate().translationY(0f).alpha(1f).setDuration(300).start();

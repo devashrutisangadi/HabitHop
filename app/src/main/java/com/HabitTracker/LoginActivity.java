@@ -2,6 +2,7 @@ package com.HabitTracker;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -21,18 +22,20 @@ public class LoginActivity extends AppCompatActivity {
     SharedPreferences prefs;
     boolean isLoginMode = true;
 
+    private DatabaseHelper dbHelper;
+
+    private static final String PREFS_NAME = "HabitKit";
+    private static final String KEY_CURRENT_USER_EMAIL = "current_user_email";
+    private static final String KEY_IS_LOGGED_IN = "is_logged_in";
+    private static final String KEY_PROFILE_SETUP_DONE = "profile_setup_done";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        prefs = getSharedPreferences("HabitKit", MODE_PRIVATE);
-
-        // TEMP: always show login screen for testing
-        if (false) {
-            goToMain();
-            return;
-        }
+        prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        dbHelper = new DatabaseHelper(this);
 
         etEmail = findViewById(R.id.et_email);
         etPassword = findViewById(R.id.et_password);
@@ -46,29 +49,25 @@ public class LoginActivity extends AppCompatActivity {
         btnTabLogin.setOnClickListener(v -> switchMode(true));
         btnTabSignup.setOnClickListener(v -> switchMode(false));
         btnSubmit.setOnClickListener(v -> handleSubmit());
+
+        switchMode(true);
     }
 
     void switchMode(boolean loginMode) {
         isLoginMode = loginMode;
         if (loginMode) {
-            // Login mode
             tilName.setVisibility(View.GONE);
             btnSubmit.setText("Login");
-            btnTabLogin.setBackgroundTintList(
-                    getColorStateList(R.color.dark_green));
+            btnTabLogin.setBackgroundTintList(getColorStateList(R.color.dark_green));
             btnTabLogin.setTextColor(getColor(R.color.beige));
-            btnTabSignup.setBackgroundTintList(
-                    getColorStateList(R.color.surface_primary));
+            btnTabSignup.setBackgroundTintList(getColorStateList(R.color.surface_primary));
             btnTabSignup.setTextColor(getColor(R.color.text_secondary));
         } else {
-            // Sign up mode
             tilName.setVisibility(View.VISIBLE);
             btnSubmit.setText("Sign Up");
-            btnTabSignup.setBackgroundTintList(
-                    getColorStateList(R.color.dark_green));
+            btnTabSignup.setBackgroundTintList(getColorStateList(R.color.dark_green));
             btnTabSignup.setTextColor(getColor(R.color.beige));
-            btnTabLogin.setBackgroundTintList(
-                    getColorStateList(R.color.surface_primary));
+            btnTabLogin.setBackgroundTintList(getColorStateList(R.color.surface_primary));
             btnTabLogin.setTextColor(getColor(R.color.text_secondary));
         }
         tvError.setVisibility(View.GONE);
@@ -78,7 +77,6 @@ public class LoginActivity extends AppCompatActivity {
         String email = etEmail.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
 
-        // Basic validation
         if (email.isEmpty()) {
             showError("Please enter your email");
             return;
@@ -97,46 +95,47 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         if (isLoginMode) {
-            // Check saved credentials
-            String savedEmail = prefs.getString("email", "");
-            String savedPassword = prefs.getString("password", "");
+            String savedPassword = dbHelper.getSavedPassword(email);
 
-            if (email.equals(savedEmail) && password.equals(savedPassword)) {
-                loginSuccess();
+            if (savedPassword != null && !savedPassword.isEmpty() && password.equals(savedPassword)) {
+                prefs.edit()
+                        .putString(KEY_CURRENT_USER_EMAIL, email)
+                        .putBoolean(KEY_IS_LOGGED_IN, true)
+                        .apply();
+                loginSuccess(true);
             } else {
                 showError("Incorrect email or password");
             }
         } else {
-            // Sign up — save credentials
             String name = etName.getText().toString().trim();
             if (name.isEmpty()) {
                 showError("Please enter your name");
                 return;
             }
+
+            dbHelper.saveUser(email, name, "", "", "", "", "");
+            dbHelper.saveUserCredentials(email, password);
+
             prefs.edit()
-                    .putString("email", email)
-                    .putString("password", password)
-                    .putString("name", name)
+                    .putString(KEY_CURRENT_USER_EMAIL, email)
+                    .putBoolean(KEY_IS_LOGGED_IN, true)
                     .apply();
-            loginSuccess();
+
+            loginSuccess(false);
         }
     }
 
-    void loginSuccess() {
-        prefs.edit().putBoolean("is_logged_in", true).apply();
+    void loginSuccess(boolean isLogin) {
+        prefs.edit().putBoolean(KEY_IS_LOGGED_IN, true).apply();
 
-        if (!isLoginMode) {
-            // Just signed up → go to Profile Setup
-            startActivity(new Intent(this, ProfileSetupActivity.class));
-        } else {
-            // Logging in → check if profile is done
-            if (prefs.getBoolean("profile_setup_done", false)) {
-                // Profile done → go to Welcome/Dashboard
+        if (isLogin) {
+            if (prefs.getBoolean(KEY_PROFILE_SETUP_DONE, false)) {
                 goToMain();
             } else {
-                // Profile not done → go to Profile Setup
-                startActivity(new Intent(this, ProfileSetupActivity.class));
+                startActivity(new Intent(this, DashboardActivity.class));
             }
+        } else {
+            startActivity(new Intent(this, ProfileSetupActivity.class));
         }
         finish();
     }

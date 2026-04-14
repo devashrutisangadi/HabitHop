@@ -1,6 +1,7 @@
 package com.HabitTracker;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.view.LayoutInflater;
@@ -11,30 +12,41 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHolder> {
 
     private final Context context;
     private List<Habit> habitList;
     private final DatabaseHelper dbHelper;
+    private final SharedPreferences prefs;
+    private final String currentUserEmail;
 
-    // In HabitAdapter.java — add at top
     public interface OnHabitUpdateListener {
         void onHabitUpdated();
     }
-    private OnHabitUpdateListener listener;
+
+    private final OnHabitUpdateListener listener;
 
     public HabitAdapter(Context context, List<Habit> habitList, OnHabitUpdateListener listener) {
-        this.context   = context;
+        this.context = context;
         this.habitList = habitList;
-        this.dbHelper  = new DatabaseHelper(context);
-        this.listener  = listener;
+        this.dbHelper = new DatabaseHelper(context);
+        this.prefs = context.getSharedPreferences("HabitKit", Context.MODE_PRIVATE);
+        this.currentUserEmail = prefs.getString("current_user_email", "");
+        this.listener = listener;
     }
+
     public HabitAdapter(Context context, List<Habit> habitList) {
-        this.context   = context;
+        this.context = context;
         this.habitList = habitList;
-        this.dbHelper  = new DatabaseHelper(context);
+        this.dbHelper = new DatabaseHelper(context);
+        this.prefs = context.getSharedPreferences("HabitKit", Context.MODE_PRIVATE);
+        this.currentUserEmail = prefs.getString("current_user_email", "");
+        this.listener = null;
     }
 
     public void updateHabits(List<Habit> newHabits) {
@@ -45,8 +57,7 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
     @NonNull
     @Override
     public HabitViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context)
-                .inflate(R.layout.item_habit, parent, false);
+        View view = LayoutInflater.from(context).inflate(R.layout.item_habit, parent, false);
         return new HabitViewHolder(view);
     }
 
@@ -58,19 +69,20 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
         holder.tvCategory.setText(habit.getCategory());
         holder.tvFrequency.setText(habit.getFrequency());
 
-        // Streak
-        int streak = dbHelper.getStreak(habit.getId());
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+
+        int streak = 0;
+        if (currentUserEmail != null && !currentUserEmail.isEmpty()) {
+            streak = dbHelper.getStreak(currentUserEmail, habit.getId());
+        }
         holder.tvStreak.setText("🔥 " + streak);
 
-        // Done state
-        String today = new java.text.SimpleDateFormat(
-                "yyyy-MM-dd", java.util.Locale.getDefault()
-        ).format(new java.util.Date());
-
-        boolean isDone = dbHelper.isHabitDoneToday(habit.getId(), today);
+        boolean isDone = false;
+        if (currentUserEmail != null && !currentUserEmail.isEmpty()) {
+            isDone = dbHelper.isHabitDoneToday(currentUserEmail, habit.getId(), today);
+        }
         setDoneState(holder, isDone);
 
-        // Category color
         switch (habit.getCategory()) {
             case "Health":
                 holder.tvCategory.setTextColor(Color.parseColor("#4A7C59"));
@@ -92,22 +104,24 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                 break;
         }
 
-        // Done button click
         holder.btnDone.setOnClickListener(v -> {
-            boolean currentlyDone = dbHelper.isHabitDoneToday(habit.getId(), today);
+            if (currentUserEmail == null || currentUserEmail.isEmpty()) return;
+
+            boolean currentlyDone = dbHelper.isHabitDoneToday(currentUserEmail, habit.getId(), today);
+
             if (!currentlyDone) {
-                dbHelper.logHabit(habit.getId(), today, true);
+                dbHelper.updateHabitLog(currentUserEmail, habit.getId(), today, true);
                 setDoneState(holder, true);
-                int newStreak = dbHelper.getStreak(habit.getId());
-                holder.tvStreak.setText("🔥 " + newStreak);
             } else {
-                dbHelper.unlogHabit(habit.getId(), today);
+                dbHelper.unlogHabit(currentUserEmail, habit.getId(), today);
                 setDoneState(holder, false);
-                int newStreak = dbHelper.getStreak(habit.getId());
-                holder.tvStreak.setText("🔥 " + newStreak);
             }
-            if (listener != null) listener.onHabitUpdated(); // ← ADD THIS
-            // bounce animation
+
+            int newStreak = dbHelper.getStreak(currentUserEmail, habit.getId());
+            holder.tvStreak.setText("🔥 " + newStreak);
+
+            if (listener != null) listener.onHabitUpdated();
+
             holder.btnDone.animate()
                     .scaleX(1.3f).scaleY(1.3f).setDuration(120)
                     .withEndAction(() ->
@@ -117,7 +131,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                     ).start();
         });
     }
-
 
     private void setDoneState(HabitViewHolder holder, boolean done) {
         if (done) {
@@ -138,18 +151,20 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
     }
 
     @Override
-    public int getItemCount() { return habitList.size(); }
+    public int getItemCount() {
+        return habitList != null ? habitList.size() : 0;
+    }
 
     static class HabitViewHolder extends RecyclerView.ViewHolder {
         TextView tvName, tvCategory, tvFrequency, tvStreak, btnDone;
 
         HabitViewHolder(@NonNull View itemView) {
             super(itemView);
-            tvName      = itemView.findViewById(R.id.tvHabitName);
-            tvCategory  = itemView.findViewById(R.id.tvHabitCategory);
+            tvName = itemView.findViewById(R.id.tvHabitName);
+            tvCategory = itemView.findViewById(R.id.tvHabitCategory);
             tvFrequency = itemView.findViewById(R.id.tvHabitFrequency);
-            tvStreak    = itemView.findViewById(R.id.tvStreak);
-            btnDone     = itemView.findViewById(R.id.btnDone);
+            tvStreak = itemView.findViewById(R.id.tvStreak);
+            btnDone = itemView.findViewById(R.id.btnDone);
         }
     }
 }

@@ -29,27 +29,22 @@ public class ProfileSetupActivity extends AppCompatActivity {
     LinearLayout llHabitInput, llHabitsList;
     Button btnAddHabit, btnSaveHabit, btnContinue;
 
-    // ── Avatar views ─────────────────────────────────────────────────
     ImageView ivProfilePhoto;
-    TextView  tvPickPhoto;
+    TextView tvPickPhoto;
 
-    // ── ChipGroups ───────────────────────────────────────────────────
     ChipGroup chipGroupGender, chipGroupGoal;
 
-    // ── Selected values ──────────────────────────────────────────────
     private String selectedGender = "";
-    private String selectedGoal   = "";
-
-    // ── Avatar state ─────────────────────────────────────────────────
+    private String selectedGoal = "";
     private String pickedAvatarResName = "";
-    private String pickedGalleryUri    = "";
+    private String pickedGalleryUri = "";
 
     SharedPreferences prefs;
-
     ArrayList<String> habitNames = new ArrayList<>();
     ArrayList<String> habitDescs = new ArrayList<>();
 
-    // ── Avatar picker launcher ───────────────────────────────────────
+    private String currentUserEmail = "";
+
     private final ActivityResultLauncher<Intent> avatarPickerLauncher =
             registerForActivityResult(
                     new ActivityResultContracts.StartActivityForResult(),
@@ -57,60 +52,58 @@ public class ProfileSetupActivity extends AppCompatActivity {
                         if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                             Intent data = result.getData();
 
-                            String resName    = data.getStringExtra(AvatarPicker.EXTRA_AVATAR_RES_NAME);
+                            String resName = data.getStringExtra(AvatarPicker.EXTRA_AVATAR_RES_NAME);
                             String galleryUri = data.getStringExtra(AvatarPicker.EXTRA_GALLERY_URI);
 
                             if (resName != null && !resName.isEmpty()) {
                                 pickedAvatarResName = resName;
-                                pickedGalleryUri    = "";
+                                pickedGalleryUri = "";
 
-                                int resId = getResources().getIdentifier(
-                                        resName, "drawable", getPackageName()
-                                );
+                                int resId = getResources().getIdentifier(resName, "drawable", getPackageName());
                                 if (resId != 0) {
                                     ivProfilePhoto.setImageResource(resId);
                                     ivProfilePhoto.setPadding(0, 0, 0, 0);
                                     ivProfilePhoto.setScaleType(ImageView.ScaleType.CENTER_CROP);
                                 }
                                 tvPickPhoto.setText("Tap to change avatar");
-
                             } else if (galleryUri != null && !galleryUri.isEmpty()) {
-                                pickedGalleryUri    = galleryUri;
+                                pickedGalleryUri = galleryUri;
                                 pickedAvatarResName = "";
-
-                                ivProfilePhoto.setImageURI(Uri.parse(galleryUri));
-                                ivProfilePhoto.setPadding(0, 0, 0, 0);
-                                ivProfilePhoto.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                                tvPickPhoto.setText("Tap to change photo");
+                                try {
+                                    ivProfilePhoto.setImageURI(Uri.parse(galleryUri));
+                                    ivProfilePhoto.setPadding(0, 0, 0, 0);
+                                    ivProfilePhoto.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                                    tvPickPhoto.setText("Tap to change photo");
+                                } catch (Exception e) {
+                                    Toast.makeText(this, "Unable to load gallery photo", Toast.LENGTH_SHORT).show();
+                                }
                             }
                         }
                     }
             );
 
-    // ════════════════════════════════════════════════════════════════
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_profile_setup);
 
         prefs = getSharedPreferences("HabitKit", MODE_PRIVATE);
+        currentUserEmail = prefs.getString("current_user_email", "");
 
-        // ── Bind views ───────────────────────────────────────────────
-        etFullname      = findViewById(R.id.et_fullname);
-        etBirthday      = findViewById(R.id.et_birthday);
-        etNewHabitName  = findViewById(R.id.et_new_habit_name);
-        etNewHabitDesc  = findViewById(R.id.et_new_habit_desc);
-        llHabitInput    = findViewById(R.id.ll_habit_input);
-        llHabitsList    = findViewById(R.id.ll_habits_list);
-        btnAddHabit     = findViewById(R.id.btn_add_habit);
-        btnSaveHabit    = findViewById(R.id.btn_save_habit);
-        btnContinue     = findViewById(R.id.btn_continue);
-        ivProfilePhoto  = findViewById(R.id.iv_profile_photo);
-        tvPickPhoto     = findViewById(R.id.tv_pick_photo);
+        etFullname = findViewById(R.id.et_fullname);
+        etBirthday = findViewById(R.id.et_birthday);
+        etNewHabitName = findViewById(R.id.et_new_habit_name);
+        etNewHabitDesc = findViewById(R.id.et_new_habit_desc);
+        llHabitInput = findViewById(R.id.ll_habit_input);
+        llHabitsList = findViewById(R.id.ll_habits_list);
+        btnAddHabit = findViewById(R.id.btn_add_habit);
+        btnSaveHabit = findViewById(R.id.btn_save_habit);
+        btnContinue = findViewById(R.id.btn_continue);
+        ivProfilePhoto = findViewById(R.id.iv_profile_photo);
+        tvPickPhoto = findViewById(R.id.tv_pick_photo);
         chipGroupGender = findViewById(R.id.chip_group_gender);
-        chipGroupGoal   = findViewById(R.id.chip_group_goal);
+        chipGroupGoal = findViewById(R.id.chip_group_goal);
 
-        // ── Avatar picker ────────────────────────────────────────────
         View.OnClickListener openAvatarPicker = v -> {
             Intent intent = new Intent(this, AvatarPicker.class);
             avatarPickerLauncher.launch(intent);
@@ -118,43 +111,36 @@ public class ProfileSetupActivity extends AppCompatActivity {
         ivProfilePhoto.setOnClickListener(openAvatarPicker);
         tvPickPhoto.setOnClickListener(openAvatarPicker);
 
-        // ── Gender chip listener ─────────────────────────────────────
         chipGroupGender.setOnCheckedStateChangeListener((group, checkedIds) -> {
             if (!checkedIds.isEmpty()) {
                 Chip chip = findViewById(checkedIds.get(0));
-                if (chip != null) selectedGender = chip.getText().toString();
+                selectedGender = chip != null ? chip.getText().toString() : "";
             } else {
                 selectedGender = "";
             }
         });
 
-        // ── Goal chip listener ───────────────────────────────────────
         chipGroupGoal.setOnCheckedStateChangeListener((group, checkedIds) -> {
             if (!checkedIds.isEmpty()) {
                 Chip chip = findViewById(checkedIds.get(0));
-                if (chip != null) selectedGoal = chip.getText().toString();
+                selectedGoal = chip != null ? chip.getText().toString() : "";
             } else {
                 selectedGoal = "";
             }
         });
 
-        // ── Birthday picker ──────────────────────────────────────────
         etBirthday.setOnClickListener(v -> {
             Calendar cal = Calendar.getInstance();
             new DatePickerDialog(this, (view, year, month, day) -> {
                 etBirthday.setText(day + " / " + (month + 1) + " / " + year);
-            }, cal.get(Calendar.YEAR) - 20,
-                    cal.get(Calendar.MONTH),
-                    cal.get(Calendar.DAY_OF_MONTH)).show();
+            }, cal.get(Calendar.YEAR) - 20, cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show();
         });
 
-        // ── Add habit ────────────────────────────────────────────────
         btnAddHabit.setOnClickListener(v -> {
             llHabitInput.setVisibility(View.VISIBLE);
             etNewHabitName.requestFocus();
         });
 
-        // ── Save habit ───────────────────────────────────────────────
         btnSaveHabit.setOnClickListener(v -> {
             String name = etNewHabitName.getText().toString().trim();
             String desc = etNewHabitDesc.getText().toString().trim();
@@ -162,6 +148,7 @@ public class ProfileSetupActivity extends AppCompatActivity {
                 etNewHabitName.setError("Please enter a habit name");
                 return;
             }
+
             habitNames.add(name);
             habitDescs.add(desc);
 
@@ -171,6 +158,7 @@ public class ProfileSetupActivity extends AppCompatActivity {
             habitChip.setTextSize(14);
             habitChip.setPadding(16, 12, 16, 12);
             habitChip.setBackgroundResource(R.drawable.card_soft_white);
+
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
@@ -184,55 +172,52 @@ public class ProfileSetupActivity extends AppCompatActivity {
             llHabitInput.setVisibility(View.GONE);
         });
 
-        // ── Continue ─────────────────────────────────────────────────
         btnContinue.setOnClickListener(v -> saveAndContinue());
     }
 
-    // ────────────────────────────────────────────────────────────────
     void saveAndContinue() {
         String fullname = etFullname.getText().toString().trim();
+        String birthday = etBirthday.getText() != null ? etBirthday.getText().toString().trim() : "";
+
         if (fullname.isEmpty()) {
             etFullname.setError("Please enter your name");
             return;
         }
 
-        // ── Save to SharedPrefs (for quick access) ───────────────────
         SharedPreferences.Editor editor = prefs.edit();
-        editor.putString("name",                fullname);
-        editor.putString("birthday",            etBirthday.getText().toString());
-        editor.putString("gender",              selectedGender);
-        editor.putString("goal",                selectedGoal);
+        editor.putString("current_user_email", currentUserEmail);
+        editor.putString("name", fullname);
+        editor.putString("birthday", birthday);
+        editor.putString("gender", selectedGender);
+        editor.putString("goal", selectedGoal);
         editor.putBoolean("profile_setup_done", true);
-        editor.putString("habit_names",         String.join(",", habitNames));
-        editor.putString("habit_descs",         String.join(",", habitDescs));
-        editor.putString("avatar_res_name",     pickedAvatarResName);
-        editor.putString("avatar_gallery_uri",  pickedGalleryUri);
-        editor.putBoolean("is_logged_in",       true);
+        editor.putString("habit_names", String.join(",", habitNames));
+        editor.putString("habit_descs", String.join(",", habitDescs));
+        editor.putString("avatar_res_name", pickedAvatarResName);
+        editor.putString("avatar_gallery_uri", pickedGalleryUri);
+        editor.putBoolean("is_logged_in", true);
         editor.apply();
 
-        // ── Save to SQLite (permanent storage) ───────────────────────
         DatabaseHelper db = new DatabaseHelper(this);
         db.saveUser(
+                currentUserEmail,
                 fullname,
-                etBirthday.getText().toString(),
+                birthday,
                 selectedGender,
                 selectedGoal,
                 pickedAvatarResName,
                 pickedGalleryUri
         );
 
-        // Save habits to SQLite too
         String today = new java.text.SimpleDateFormat(
                 "yyyy-MM-dd", java.util.Locale.getDefault()
         ).format(new java.util.Date());
 
         for (int i = 0; i < habitNames.size(); i++) {
-            db.addHabit(habitNames.get(i), habitDescs.get(i), "Health", "Daily", today);
+            db.addHabit(currentUserEmail, habitNames.get(i), habitDescs.get(i), "Health", "Daily", today);
         }
 
-        Toast.makeText(this, "Welcome, " + fullname + "!", Toast.LENGTH_SHORT).show();
         Intent intent = new Intent(this, WelcomeActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
     }
