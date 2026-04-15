@@ -84,7 +84,8 @@
         <activity android:name=".EditProfileActivity"
             android:exported="false"/>
 
-
+        <activity android:name=".RemindersActivity"
+            android:exported="false"/>
 
     </application>
 

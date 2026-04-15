@@ -381,9 +381,12 @@ public class DashboardActivity extends AppCompatActivity {
     }
 
     private void setupNavigation() {
-        navAdd.setOnClickListener(v -> startActivityForResult(new Intent(this, AddHabitActivity.class), 100));
-        navJournal.setOnClickListener(v -> startActivity(new Intent(this, JournalActivity.class)));
-        navReminders.setOnClickListener(v -> Toast.makeText(this, "Reminders coming soon!", Toast.LENGTH_SHORT).show());
+        navAdd.setOnClickListener(v ->
+                startActivityForResult(new Intent(this, AddHabitActivity.class), 100));
+        navJournal.setOnClickListener(v ->
+                startActivity(new Intent(this, JournalActivity.class)));
+        navReminders.setOnClickListener(v ->
+                startActivity(new Intent(DashboardActivity.this, RemindersActivity.class)));
         navProfile.setOnClickListener(v -> startActivity(new Intent(this, ProfileActivity.class)));
     }
 
