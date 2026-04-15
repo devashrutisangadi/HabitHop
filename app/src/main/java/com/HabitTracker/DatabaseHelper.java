@@ -257,7 +257,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 new String[]{userEmail, date});
     }
 
-    public void unlogHabit(String userEmail, int id, String today) {
+    public void unlogHabit(String userEmail, int habitId, String today) {
+        SQLiteDatabase db = getWritableDatabase();
+        db.delete(TABLE_LOGS,
+                COL_USER_EMAIL + "=? AND " + COL_LOG_HABIT + "=? AND " + COL_LOG_DATE + "=?",
+                new String[]{userEmail, String.valueOf(habitId), today});
     }
 
     public String getSavedPassword(String email) {
