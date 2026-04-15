@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    android:background="@drawable/card_soft_white"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/tvMoodDate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Wed, 15 Apr • 09:30 AM"
+        android:textColor="#1F1A17"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvMoodName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="Good"
+        android:textColor="#7A9A2D"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvMoodScoreItem"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="80/100"
+        android:textColor="#8A817C"
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/tvMoodNote"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="No note added"
+        android:textColor="#6F5B5B"
+        android:textSize="13sp" />
+</LinearLayout>

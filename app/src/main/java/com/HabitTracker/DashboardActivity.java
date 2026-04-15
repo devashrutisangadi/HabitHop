@@ -6,11 +6,10 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewOutlineProvider;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -19,9 +18,9 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.appcompat.app.AppCompatActivity;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -33,18 +32,28 @@ public class DashboardActivity extends AppCompatActivity {
 
     private TextView tvUserName;
     private ImageView profileImage;
+
     private LinearLayout navHome, navJournal, navAdd, navReminders, navProfile;
+    private LinearLayout cardSleep, cardMood;
+    private TextView tvSleepCardTitle, tvSleepCardSubtitle, tvSleepCardMeta;
+    private TextView tvMoodCardTitle, tvMoodCardSubtitle;
+
     private TextView tvStreakCount, tvStreakMessage, tvTasksDone, tvTasksDue;
     private TextView dayMon, dayTue, dayWed, dayThu, dayFri, daySat, daySun;
+
     private TextView tvProgressEmoji, tvProgressMessage, tvProgressCount;
     private ProgressBar progressHabits;
-    private SharedPreferences prefs;
-    private FrameLayout onboardingOverlay;
-    private int currentStep = 0;
 
     private RecyclerView recyclerHabits;
     private HabitAdapter habitAdapter;
     private DatabaseHelper dbHelper;
+
+    private Button btnWriteMore;
+    private SharedPreferences prefs;
+    private String currentUserEmail = "";
+
+    private FrameLayout onboardingOverlay;
+    private int currentStep = 0;
 
     private final int[] stepViewIds = {
             R.id.profileImage,
@@ -78,51 +87,65 @@ public class DashboardActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.dashboard);
 
-        prefs    = getSharedPreferences("HabitKit", MODE_PRIVATE);
+        prefs = getSharedPreferences("HabitKit", MODE_PRIVATE);
+        currentUserEmail = prefs.getString("current_user_email", "");
         dbHelper = new DatabaseHelper(this);
 
         bindViews();
         loadUserData();
         setupNavigation();
+        setupSleepCard();
+        setupMoodCard();
         setupHabitsRecycler();
+        setupWriteMoreButton();
+
         loadHabits();
         updateProgress();
         updateStreak();
+        updateSleepCard();
+        updateMoodCard();
 
         if (!prefs.getBoolean("onboarding_done", false)) {
-            new Handler(Looper.getMainLooper()).postDelayed(
-                    this::startOnboarding, 800L
-            );
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this::startOnboarding, 800L);
         }
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 100 && resultCode == RESULT_OK) {
-            loadHabits();
-            updateProgress();
-            updateStreak();
-        }
+    protected void onResume() {
+        super.onResume();
+        loadUserData();
+        loadHabits();
+        updateProgress();
+        updateStreak();
+        updateSleepCard();
+        updateMoodCard();
     }
 
     private void bindViews() {
-        tvUserName        = findViewById(R.id.tvUserName);
-        tvProgressCount   = findViewById(R.id.tvProgressCount);
-        tvProgressEmoji   = findViewById(R.id.tvProgressEmoji);
-        tvProgressMessage = findViewById(R.id.tvProgressMessage);
-        progressHabits    = findViewById(R.id.progressHabits);
-        profileImage      = findViewById(R.id.profileImage);
-        navHome           = findViewById(R.id.navHome);
-        navJournal        = findViewById(R.id.navJournal);
-        navAdd            = findViewById(R.id.navAdd);
-        navReminders      = findViewById(R.id.navReminders);
-        navProfile        = findViewById(R.id.navProfile);
-        recyclerHabits    = findViewById(R.id.recyclerHabits);
-        tvStreakCount     = findViewById(R.id.tvStreakCount);
-        tvStreakMessage   = findViewById(R.id.tvStreakMessage);
-        tvTasksDone       = findViewById(R.id.tvTasksDone);
-        tvTasksDue        = findViewById(R.id.tvTasksDue);
+        tvUserName = findViewById(R.id.tvUserName);
+        profileImage = findViewById(R.id.profileImage);
+
+        navHome = findViewById(R.id.navHome);
+        navJournal = findViewById(R.id.navJournal);
+        navAdd = findViewById(R.id.navAdd);
+        navReminders = findViewById(R.id.navReminders);
+        navProfile = findViewById(R.id.navProfile);
+
+        cardSleep = findViewById(R.id.cardSleep);
+        cardMood = findViewById(R.id.cardMood);
+
+        tvSleepCardTitle = findViewById(R.id.tvSleepCardTitle);
+        tvSleepCardSubtitle = findViewById(R.id.tvSleepCardSubtitle);
+        tvSleepCardMeta = findViewById(R.id.tvSleepCardMeta);
+
+        tvMoodCardTitle = findViewById(R.id.tvMoodCardTitle);
+        tvMoodCardSubtitle = findViewById(R.id.tvMoodCardSubtitle);
+
+        tvStreakCount = findViewById(R.id.tvStreakCount);
+        tvStreakMessage = findViewById(R.id.tvStreakMessage);
+        tvTasksDone = findViewById(R.id.tvTasksDone);
+        tvTasksDue = findViewById(R.id.tvTasksDue);
+
         dayMon = findViewById(R.id.dayMon);
         dayTue = findViewById(R.id.dayTue);
         dayWed = findViewById(R.id.dayWed);
@@ -130,22 +153,96 @@ public class DashboardActivity extends AppCompatActivity {
         dayFri = findViewById(R.id.dayFri);
         daySat = findViewById(R.id.daySat);
         daySun = findViewById(R.id.daySun);
+
+        tvProgressEmoji = findViewById(R.id.tvProgressEmoji);
+        tvProgressMessage = findViewById(R.id.tvProgressMessage);
+        tvProgressCount = findViewById(R.id.tvProgressCount);
+        progressHabits = findViewById(R.id.progressHabits);
+
+        recyclerHabits = findViewById(R.id.recyclerHabits);
+        btnWriteMore = findViewById(R.id.btnWriteMore);
+    }
+
+    private void setupWriteMoreButton() {
+        if (btnWriteMore != null) {
+            btnWriteMore.setOnClickListener(v -> startActivity(new Intent(DashboardActivity.this, JournalActivity.class)));
+        }
+    }
+
+    private void setupSleepCard() {
+        if (cardSleep != null) {
+            cardSleep.setOnClickListener(v -> startActivity(new Intent(DashboardActivity.this, SleepTrackerActivity.class)));
+        }
+    }
+
+    private void setupMoodCard() {
+        if (cardMood != null) {
+            cardMood.setOnClickListener(v -> startActivity(new Intent(DashboardActivity.this, MoodTrackerActivity.class)));
+        }
+    }
+
+    private void updateSleepCard() {
+        String lastDate = prefs.getString("sleep_last_date", "");
+        String lastDuration = prefs.getString("sleep_last_duration", "");
+        String lastQuality = prefs.getString("sleep_last_quality", "");
+        String lastBed = prefs.getString("sleep_last_bed", "");
+        String lastWake = prefs.getString("sleep_last_wake", "");
+
+        boolean hasSleepRecord = !lastDate.isEmpty() || !lastDuration.isEmpty();
+
+        if (!hasSleepRecord) {
+            tvSleepCardTitle.setText("Track sleep");
+            tvSleepCardSubtitle.setText("Start your first sleep session");
+            tvSleepCardMeta.setText("Tap to open sleep tracker");
+            return;
+        }
+
+        tvSleepCardTitle.setText("Last sleep");
+        tvSleepCardSubtitle.setText((lastDuration.isEmpty() ? "Recent sleep session" : lastDuration) +
+                (lastQuality.isEmpty() ? "" : " • " + lastQuality));
+
+        StringBuilder meta = new StringBuilder();
+        if (!lastDate.isEmpty()) meta.append(lastDate);
+        if (!lastBed.isEmpty() || !lastWake.isEmpty()) {
+            if (meta.length() > 0) meta.append(" • ");
+            meta.append(lastBed).append(" → ").append(lastWake);
+        }
+        tvSleepCardMeta.setText(meta.length() == 0 ? "Tap to view details" : meta.toString());
+    }
+
+    private void updateMoodCard() {
+        String mood = prefs.getString("latest_mood_name", "");
+        String moodNote = prefs.getString("latest_mood_note", "");
+
+        if (mood == null || mood.isEmpty()) {
+            tvMoodCardTitle.setText("Track mood");
+            tvMoodCardSubtitle.setText("How are you feeling today?");
+            return;
+        }
+
+        tvMoodCardTitle.setText(mood);
+        if (moodNote == null || moodNote.isEmpty()) {
+            tvMoodCardSubtitle.setText("Latest mood entry");
+        } else {
+            tvMoodCardSubtitle.setText(moodNote);
+        }
     }
 
     private void loadHabits() {
-        List<Habit> habits = dbHelper.getAllHabitsList();
-        habitAdapter.updateHabits(habits);
+        List<Habit> habits = dbHelper.getAllHabitsList(currentUserEmail);
+        if (habitAdapter != null) {
+            habitAdapter.updateHabits(habits);
+        }
     }
 
     private void updateProgress() {
-        List<Habit> habits = dbHelper.getAllHabitsList();
-        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                .format(new java.util.Date());
+        List<Habit> habits = dbHelper.getAllHabitsList(currentUserEmail);
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new java.util.Date());
 
         int total = habits.size();
-        int done  = 0;
+        int done = 0;
         for (Habit h : habits) {
-            if (dbHelper.isHabitDoneToday(h.getId(), today)) done++;
+            if (dbHelper.isHabitDoneToday(currentUserEmail, h.getId(), today)) done++;
         }
 
         tvProgressCount.setText(done + "/" + total + " done");
@@ -154,63 +251,62 @@ public class DashboardActivity extends AppCompatActivity {
 
         String emoji, message;
         if (percent == 0) {
-            emoji = "😴"; message = "Wake up! Let's start your habits!";
+            emoji = "😴";
+            message = "Wake up! Let's start your habits!";
         } else if (percent <= 25) {
-            emoji = "😐"; message = "Just getting started...";
+            emoji = "😐";
+            message = "Just getting started...";
         } else if (percent <= 50) {
-            emoji = "🙂"; message = "Getting there, keep going!";
+            emoji = "🙂";
+            message = "Getting there, keep going!";
         } else if (percent <= 75) {
-            emoji = "😊"; message = "You're doing great!";
+            emoji = "😊";
+            message = "You're doing great!";
         } else if (percent < 100) {
-            emoji = "😄"; message = "Almost there, don't stop now!";
+            emoji = "😄";
+            message = "Almost there, don't stop now!";
         } else {
-            emoji = "🥳"; message = "All done! You're amazing!";
+            emoji = "🥳";
+            message = "All done! You're amazing!";
         }
 
         tvProgressEmoji.setText(emoji);
         tvProgressMessage.setText(message);
-        tvProgressEmoji.animate()
-                .scaleX(1.3f).scaleY(1.3f).setDuration(150)
-                .withEndAction(() ->
-                        tvProgressEmoji.animate()
-                                .scaleX(1f).scaleY(1f)
-                                .setDuration(100).start()
-                ).start();
     }
 
     private void updateStreak() {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
         String today = sdf.format(Calendar.getInstance().getTime());
 
-        List<Habit> habits = dbHelper.getAllHabitsList();
+        List<Habit> habits = dbHelper.getAllHabitsList(currentUserEmail);
         int total = habits.size();
-        int done  = 0;
+        int done = 0;
         for (Habit h : habits) {
-            if (dbHelper.isHabitDoneToday(h.getId(), today)) done++;
+            if (dbHelper.isHabitDoneToday(currentUserEmail, h.getId(), today)) done++;
         }
 
         tvTasksDone.setText(String.valueOf(done));
         tvTasksDue.setText(String.valueOf(total - done));
 
         int streak = 0;
-        if (!habits.isEmpty()) streak = dbHelper.getStreak(habits.get(0).getId());
+        if (!habits.isEmpty()) streak = dbHelper.getStreak(currentUserEmail, habits.get(0).getId());
         tvStreakCount.setText(String.valueOf(streak));
 
-        if (streak == 0)     tvStreakMessage.setText("Start your streak today! 💪");
+        if (streak == 0) tvStreakMessage.setText("Start your streak today! 💪");
         else if (streak < 3) tvStreakMessage.setText("Good start, keep going!");
         else if (streak < 7) tvStreakMessage.setText("You are doing great! 🔥");
-        else                 tvStreakMessage.setText("Unstoppable! 🚀");
+        else tvStreakMessage.setText("Unstoppable! 🚀");
 
         TextView[] dayViews = {dayMon, dayTue, dayWed, dayThu, dayFri, daySat, daySun};
         Calendar cal = Calendar.getInstance();
         cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
 
         for (int i = 0; i < 7; i++) {
-            String dateStr  = sdf.format(cal.getTime());
+            String dateStr = sdf.format(cal.getTime());
             boolean isToday = dateStr.equals(today);
-            boolean isPast  = cal.getTime().before(Calendar.getInstance().getTime()) && !isToday;
-            int status      = dbHelper.getDailyCompletionStatus(dateStr);
-            TextView tv     = dayViews[i];
+            boolean isPast = cal.getTime().before(Calendar.getInstance().getTime()) && !isToday;
+            int status = dbHelper.getDailyCompletionStatus(currentUserEmail, dateStr);
+            TextView tv = dayViews[i];
 
             if (status == 2) {
                 tv.setText("✓");
@@ -232,16 +328,21 @@ public class DashboardActivity extends AppCompatActivity {
     }
 
     private void setupHabitsRecycler() {
-        habitAdapter = new HabitAdapter(this, new ArrayList<>(), () -> {
-            updateProgress();
-            updateStreak();
-        });
+        habitAdapter = new HabitAdapter(
+                this,
+                new ArrayList<>(),
+                currentUserEmail,
+                () -> {
+                    updateProgress();
+                    updateStreak();
+                }
+        );
         recyclerHabits.setLayoutManager(new LinearLayoutManager(this));
         recyclerHabits.setAdapter(habitAdapter);
     }
 
     private void loadUserData() {
-        String name = dbHelper.getUserName();
+        String name = dbHelper.getUserName(currentUserEmail);
         tvUserName.setText("Hi, " + name + " 👋");
 
         String avatarRes = prefs.getString("avatar_res_name", "");
@@ -256,7 +357,7 @@ public class DashboardActivity extends AppCompatActivity {
 
         profileImage.post(() -> {
             profileImage.setClipToOutline(true);
-            profileImage.setOutlineProvider(new android.view.ViewOutlineProvider() {
+            profileImage.setOutlineProvider(new ViewOutlineProvider() {
                 @Override
                 public void getOutline(View view, android.graphics.Outline outline) {
                     outline.setOval(0, 0, view.getWidth(), view.getHeight());
@@ -266,31 +367,16 @@ public class DashboardActivity extends AppCompatActivity {
     }
 
     private void setupNavigation() {
-        navAdd.setOnClickListener(v ->
-                startActivityForResult(new Intent(this, AddHabitActivity.class), 100)
-        );
-        navJournal.setOnClickListener(v ->
-                Toast.makeText(this, "Journal coming soon!", Toast.LENGTH_SHORT).show()
-        );
-        navReminders.setOnClickListener(v ->
-                Toast.makeText(this, "Reminders coming soon!", Toast.LENGTH_SHORT).show()
-        );
-        navProfile.setOnClickListener(v ->
-                startActivity(new Intent(this, ProfileActivity.class))
-        );
+        navAdd.setOnClickListener(v -> startActivityForResult(new Intent(this, AddHabitActivity.class), 100));
+        navJournal.setOnClickListener(v -> startActivity(new Intent(this, JournalActivity.class)));
+        navReminders.setOnClickListener(v -> Toast.makeText(this, "Reminders coming soon!", Toast.LENGTH_SHORT).show());
+        navProfile.setOnClickListener(v -> startActivity(new Intent(this, ProfileActivity.class)));
     }
-
-    // ════════════════════════════════════════════════════════════════
-    //  ONBOARDING TOUR
-    // ════════════════════════════════════════════════════════════════
 
     private void startOnboarding() {
         currentStep = 0;
         onboardingOverlay = new FrameLayout(this);
-        onboardingOverlay.setLayoutParams(new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-        ));
+        onboardingOverlay.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         onboardingOverlay.setClickable(true);
         ViewGroup root = findViewById(android.R.id.content);
         root.addView(onboardingOverlay);
@@ -301,19 +387,19 @@ public class DashboardActivity extends AppCompatActivity {
         onboardingOverlay.removeAllViews();
 
         View targetView = findViewById(stepViewIds[step]);
-        if (targetView == null) { nextStep(); return; }
+        if (targetView == null) {
+            nextStep();
+            return;
+        }
 
         int[] loc = new int[2];
         targetView.getLocationOnScreen(loc);
-        int cx     = loc[0] + targetView.getWidth() / 2;
-        int cy     = loc[1] + targetView.getHeight() / 2;
+        int cx = loc[0] + targetView.getWidth() / 2;
+        int cy = loc[1] + targetView.getHeight() / 2;
         int radius = Math.max(targetView.getWidth(), targetView.getHeight()) / 2 + 40;
 
         Spotlightview spotlight = new Spotlightview(this, cx, cy, radius);
-        spotlight.setLayoutParams(new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-        ));
+        spotlight.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         onboardingOverlay.addView(spotlight);
 
         LinearLayout tooltip = new LinearLayout(this);
@@ -329,13 +415,8 @@ public class DashboardActivity extends AppCompatActivity {
             TextView dot = new TextView(this);
             dot.setText("●");
             dot.setTextSize(10f);
-            dot.setTextColor(i == step
-                    ? Color.parseColor("#2D6A4F")
-                    : Color.parseColor("#CCCCCC"));
-            LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-            );
+            dot.setTextColor(i == step ? Color.parseColor("#2D6A4F") : Color.parseColor("#CCCCCC"));
+            LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             dp.setMargins(0, 0, 8, 0);
             dot.setLayoutParams(dp);
             dotsRow.addView(dot);
@@ -366,9 +447,7 @@ public class DashboardActivity extends AppCompatActivity {
         btnSkip.setText("Skip tour");
         btnSkip.setTextColor(Color.parseColor("#8A817C"));
         btnSkip.setTextSize(14f);
-        LinearLayout.LayoutParams skipParams = new LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
-        );
+        LinearLayout.LayoutParams skipParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         btnSkip.setLayoutParams(skipParams);
         btnSkip.setOnClickListener(v -> finishOnboarding());
         btnRow.addView(btnSkip);
@@ -388,10 +467,7 @@ public class DashboardActivity extends AppCompatActivity {
         btnRow.addView(btnNext);
         tooltip.addView(btnRow);
 
-        FrameLayout.LayoutParams tooltipParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        );
+        FrameLayout.LayoutParams tooltipParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         tooltipParams.gravity = Gravity.BOTTOM;
 
         int screenHeight = getResources().getDisplayMetrics().heightPixels;

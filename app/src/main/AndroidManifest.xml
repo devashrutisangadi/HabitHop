@@ -75,6 +75,11 @@
             android:name=".ProfileActivity"
             android:exported="false" />
 
+        <activity android:name=".SleepTrackerActivity"
+            android:exported="false" />
+        <activity android:name=".MoodTrackerActivity"
+            android:exported="false"/>
+
 
     </application>
 
