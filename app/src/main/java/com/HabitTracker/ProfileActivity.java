@@ -8,13 +8,13 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.ViewOutlineProvider;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -30,6 +30,8 @@ public class ProfileActivity extends AppCompatActivity {
     private SharedPreferences prefs;
     private String currentUserEmail = "";
 
+    private LinearLayout navHome, navJournal, navAdd, navReminders, navProfile;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -40,6 +42,7 @@ public class ProfileActivity extends AppCompatActivity {
         currentUserEmail = prefs.getString("current_user_email", "");
 
         bindViews();
+        setupNavigation();
         loadProfile();
         loadStats();
 
@@ -86,6 +89,37 @@ public class ProfileActivity extends AppCompatActivity {
         tvDoneToday = findViewById(R.id.tvDoneToday);
         btnEditProfile = findViewById(R.id.btnEditProfile);
         btnLogout = findViewById(R.id.btnLogout);
+
+        navHome = findViewById(R.id.navHome);
+        navJournal = findViewById(R.id.navJournal);
+        navAdd = findViewById(R.id.navAdd);
+        navReminders = findViewById(R.id.navReminders);
+        navProfile = findViewById(R.id.navProfile);
+    }
+
+    private void setupNavigation() {
+        navHome.setOnClickListener(v -> {
+            startActivity(new Intent(this, DashboardActivity.class));
+            finish();
+        });
+
+        navJournal.setOnClickListener(v -> {
+            startActivity(new Intent(this, JournalActivity.class));
+            finish();
+        });
+
+        navAdd.setOnClickListener(v -> {
+            startActivity(new Intent(this, AddHabitActivity.class));
+        });
+
+        navReminders.setOnClickListener(v -> {
+            startActivity(new Intent(this, RemindersActivity.class));
+            finish();
+        });
+
+        navProfile.setOnClickListener(v -> {
+            // already here
+        });
     }
 
     private void loadProfile() {
@@ -168,6 +202,8 @@ public class ProfileActivity extends AppCompatActivity {
         }
 
         List<Habit> habits = dbHelper.getAllHabitsList(currentUserEmail);
+        if (habits == null) habits = new java.util.ArrayList<>();
+
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
         int total = habits.size();
@@ -177,7 +213,6 @@ public class ProfileActivity extends AppCompatActivity {
         for (Habit h : habits) {
             if (dbHelper.isHabitDoneToday(currentUserEmail, h.getId(), today)) done++;
         }
-
 
         if (!habits.isEmpty()) {
             streak = dbHelper.getStreak(currentUserEmail, habits.get(0).getId());

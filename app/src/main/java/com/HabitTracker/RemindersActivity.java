@@ -1,10 +1,11 @@
 package com.HabitTracker;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -27,6 +28,8 @@ public class RemindersActivity extends AppCompatActivity {
     private ReminderAdapter adapter;
     private RewardManager rewardManager;
 
+    private LinearLayout navHome, navJournal, navAdd, navReminders, navProfile;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -41,6 +44,12 @@ public class RemindersActivity extends AppCompatActivity {
         tvReminderCount = findViewById(R.id.tvReminderCount);
         tvReminderSubtitle = findViewById(R.id.tvReminderSubtitle);
 
+        navHome = findViewById(R.id.navHome);
+        navJournal = findViewById(R.id.navJournal);
+        navAdd = findViewById(R.id.navAdd);
+        navReminders = findViewById(R.id.navReminders);
+        navProfile = findViewById(R.id.navProfile);
+
         recyclerReminders.setLayoutManager(new LinearLayoutManager(this));
         adapter = new ReminderAdapter(
                 this,
@@ -51,6 +60,7 @@ public class RemindersActivity extends AppCompatActivity {
         );
         recyclerReminders.setAdapter(adapter);
 
+        setupNavigation();
         loadReminders();
     }
 
@@ -59,6 +69,30 @@ public class RemindersActivity extends AppCompatActivity {
         super.onResume();
         currentUserEmail = prefs.getString("current_user_email", "");
         loadReminders();
+    }
+
+    private void setupNavigation() {
+        navHome.setOnClickListener(v -> {
+            startActivity(new Intent(this, DashboardActivity.class));
+            finish();
+        });
+
+        navJournal.setOnClickListener(v -> {
+            startActivity(new Intent(this, JournalActivity.class));
+            finish();
+        });
+
+        navAdd.setOnClickListener(v ->
+                startActivityForResult(new Intent(this, AddHabitActivity.class), 100));
+
+        navReminders.setOnClickListener(v -> {
+            // already on reminders page
+        });
+
+        navProfile.setOnClickListener(v -> {
+            startActivity(new Intent(this, ProfileActivity.class));
+            finish();
+        });
     }
 
     private void loadReminders() {
@@ -73,16 +107,12 @@ public class RemindersActivity extends AppCompatActivity {
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
         List<Habit> pending = new ArrayList<>();
-        int totalHabits = habits != null ? habits.size() : 0;
-        int completedHabits = 0;
 
         if (habits != null) {
             for (Habit h : habits) {
                 if (h == null) continue;
                 boolean done = dbHelper.isHabitDoneToday(currentUserEmail, h.getId(), today);
-                if (done) {
-                    completedHabits++;
-                } else {
+                if (!done) {
                     pending.add(h);
                 }
             }

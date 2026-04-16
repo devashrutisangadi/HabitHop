@@ -127,8 +127,7 @@ public class JournalActivity extends AppCompatActivity {
         );
 
         navReminders.setOnClickListener(v ->
-                Toast.makeText(this, "Reminders coming soon!", Toast.LENGTH_SHORT).show()
-        );
+                startActivity(new Intent(JournalActivity.this, RemindersActivity.class)));
 
         navProfile.setOnClickListener(v ->
                 startActivity(new Intent(this, ProfileActivity.class))
