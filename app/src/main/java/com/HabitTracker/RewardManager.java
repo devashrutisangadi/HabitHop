@@ -12,7 +12,6 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -26,6 +25,23 @@ public class RewardManager {
     private final DatabaseHelper dbHelper;
     private final SharedPreferences prefs;
     private final Random random = new Random();
+
+    private final int[] rewardImages = new int[]{
+            R.drawable.duck,
+            R.drawable.dinoyawwr,
+            R.drawable.cow,
+            R.drawable.cat,
+            R.drawable.camel,
+            R.drawable.dogoo,
+            R.drawable.frog_logo,
+            R.drawable.pig,
+            R.drawable.mouse,
+            R.drawable.penguin,
+            R.drawable.rabbit,
+            R.drawable.squirrel,
+            R.drawable.sloth,
+            R.drawable.turtle
+    };
 
     public RewardManager(Context context) {
         this.context = context;
@@ -73,8 +89,8 @@ public class RewardManager {
             TextView message = root.findViewById(R.id.tvRewardMessage);
             Button ok = root.findViewById(R.id.btnRewardOk);
 
-            boolean showDuck = random.nextBoolean();
-            imageView.setImageResource(showDuck ? R.drawable.duck : R.drawable.dinoyawwr);
+            int randomImage = rewardImages[random.nextInt(rewardImages.length)];
+            imageView.setImageResource(randomImage);
 
             title.setText("Reward unlocked!");
             message.setText("You completed 100% of your habits today. Amazing work!");
