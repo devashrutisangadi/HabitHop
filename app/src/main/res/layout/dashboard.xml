@@ -582,7 +582,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="22dp"
-                android:text="Today's Habits ✅"
+                android:text="Today's Habits"
                 android:textColor="#1F1A17"
                 android:textSize="20sp"
                 android:textStyle="bold" />

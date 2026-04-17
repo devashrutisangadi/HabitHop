@@ -62,7 +62,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
         if (userEmail != null && !userEmail.isEmpty()) {
             streak = dbHelper.getStreak(userEmail, habit.getId());
         }
-        holder.tvStreak.setText("🔥 " + streak);
 
         boolean isDone = false;
         if (userEmail != null && !userEmail.isEmpty()) {
@@ -134,14 +133,13 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
     }
 
     static class HabitViewHolder extends RecyclerView.ViewHolder {
-        TextView tvName, tvCategory, tvFrequency, tvStreak, btnDone;
+        TextView tvName, tvCategory, tvFrequency, btnDone;
 
         HabitViewHolder(@NonNull View itemView) {
             super(itemView);
             tvName = itemView.findViewById(R.id.tvHabitName);
             tvCategory = itemView.findViewById(R.id.tvHabitCategory);
             tvFrequency = itemView.findViewById(R.id.tvHabitFrequency);
-            tvStreak = itemView.findViewById(R.id.tvStreak);
             btnDone = itemView.findViewById(R.id.btnDone);
         }
     }

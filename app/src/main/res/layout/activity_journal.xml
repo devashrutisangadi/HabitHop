@@ -148,15 +148,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="140dp"
                 android:layout_marginTop="12dp"
-                android:background="@android:color/transparent"
+                android:background="@drawable/bg_journal_text"
                 android:gravity="top"
                 android:hint="Today I..."
                 android:inputType="textMultiLine|textCapSentences"
-                android:padding="0dp"
+                android:padding="10dp"
                 android:textColor="#1F1A17"
                 android:textColorHint="#A29A94"
                 android:textSize="15sp"/>
-
 
 
             <TextView
@@ -174,7 +173,8 @@
                 android:layout_height="0dp"
                 android:layout_marginTop="10dp"
                 android:layout_weight="1"
-                android:nestedScrollingEnabled="false" />
+                android:nestedScrollingEnabled="false"
+                android:backgroundTint="#F5F2EC"/>
         </LinearLayout>
 
         <LinearLayout

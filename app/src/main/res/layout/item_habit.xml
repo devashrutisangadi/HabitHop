@@ -67,22 +67,6 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Streak badge -->
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center">
 
-        <TextView
-            android:id="@+id/tvStreak"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🔥 0"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:textColor="#F4A300"/>
-
-    </LinearLayout>
 
 </LinearLayout>

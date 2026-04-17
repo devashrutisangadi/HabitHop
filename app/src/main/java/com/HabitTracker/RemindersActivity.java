@@ -86,7 +86,6 @@ public class RemindersActivity extends AppCompatActivity {
                 startActivityForResult(new Intent(this, AddHabitActivity.class), 100));
 
         navReminders.setOnClickListener(v -> {
-            // already on reminders page
         });
 
         navProfile.setOnClickListener(v -> {
@@ -126,6 +125,19 @@ public class RemindersActivity extends AppCompatActivity {
                         : "You still have tasks waiting for you today."
         );
 
-        rewardManager.checkAndShowReward(currentUserEmail);
+        boolean allDone = pending.isEmpty() && habits != null && !habits.isEmpty();
+        String completionKey = "reward_completion_state_" + currentUserEmail + "_" + today;
+        boolean wasCompletedBefore = prefs.getBoolean(completionKey, false);
+
+        if (allDone) {
+            if (!wasCompletedBefore) {
+                prefs.edit().putBoolean(completionKey, true).apply();
+                rewardManager.checkAndShowReward(currentUserEmail);
+            }
+        } else {
+            if (wasCompletedBefore) {
+                prefs.edit().remove(completionKey).apply();
+            }
+        }
     }
 }

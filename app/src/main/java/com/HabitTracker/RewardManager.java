@@ -3,17 +3,16 @@ package com.HabitTracker;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
+import android.content.SharedPreferences;
 import android.text.TextUtils;
-import android.view.Gravity;
-import android.view.View;
+import android.view.LayoutInflater;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.content.SharedPreferences;
+import android.widget.Toast;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -51,76 +50,52 @@ public class RewardManager {
             }
         }
 
-        if (completedHabits > 0 && completedHabits == totalHabits) {
-            String lastRewardDate = prefs.getString("reward_last_shown_date_" + userEmail, "");
-            if (today.equals(lastRewardDate)) return;
-
+        if (completedHabits == totalHabits) {
             showRewardDialog();
-            prefs.edit().putString("reward_last_shown_date_" + userEmail, today).apply();
         }
     }
 
     private void showRewardDialog() {
         if (!(context instanceof Activity)) return;
+
         Activity activity = (Activity) context;
         if (activity.isFinishing() || activity.isDestroyed()) return;
 
-        Dialog dialog = new Dialog(context);
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        activity.runOnUiThread(() -> {
+            Dialog dialog = new Dialog(activity);
+            dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
 
-        LinearLayout root = new LinearLayout(context);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(24), dp(24), dp(24), dp(24));
-        root.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.setBackgroundColor(Color.parseColor("#FFF8F2"));
+            LayoutInflater inflater = LayoutInflater.from(activity);
+            LinearLayout root = (LinearLayout) inflater.inflate(R.layout.dialog_reward, null, false);
 
-        ImageView imageView = new ImageView(context);
-        LinearLayout.LayoutParams imgParams = new LinearLayout.LayoutParams(dp(140), dp(140));
-        imgParams.bottomMargin = dp(16);
-        imageView.setLayoutParams(imgParams);
+            ImageView imageView = root.findViewById(R.id.ivRewardImage);
+            TextView title = root.findViewById(R.id.tvRewardTitle);
+            TextView message = root.findViewById(R.id.tvRewardMessage);
+            Button ok = root.findViewById(R.id.btnRewardOk);
 
-        boolean showDuck = random.nextBoolean();
-        imageView.setImageResource(showDuck ? R.drawable.duck : R.drawable.dinoyawwr);
-        imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            boolean showDuck = random.nextBoolean();
+            imageView.setImageResource(showDuck ? R.drawable.duck : R.drawable.dinoyawwr);
 
-        TextView title = new TextView(context);
-        title.setText("Reward unlocked!");
-        title.setTextColor(Color.parseColor("#1F1A17"));
-        title.setTextSize(22f);
-        title.setTypeface(null, android.graphics.Typeface.BOLD);
-        title.setGravity(Gravity.CENTER);
-        title.setPadding(0, 0, 0, dp(8));
+            title.setText("Reward unlocked!");
+            message.setText("You completed 100% of your habits today. Amazing work!");
 
-        TextView message = new TextView(context);
-        message.setText("You completed 100% of your habits today. Amazing work!");
-        message.setTextColor(Color.parseColor("#6F5B5B"));
-        message.setTextSize(14f);
-        message.setGravity(Gravity.CENTER);
-        message.setPadding(0, 0, 0, dp(20));
+            ok.setOnClickListener(v -> dialog.dismiss());
 
-        Button ok = new Button(context);
-        ok.setText("Yay!");
-        ok.setTextColor(Color.WHITE);
-        ok.setBackgroundColor(Color.parseColor("#2D6A4F"));
-        ok.setAllCaps(false);
-        ok.setOnClickListener(v -> dialog.dismiss());
+            dialog.setContentView(root);
 
-        root.addView(imageView);
-        root.addView(title);
-        root.addView(message);
-        root.addView(ok);
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+                dialog.getWindow().getAttributes().windowAnimations = R.style.DialogPopupAnimation;
+            }
 
-        dialog.setContentView(root);
+            dialog.show();
 
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        }
-
-        dialog.show();
-    }
-
-    private int dp(int value) {
-        float density = context.getResources().getDisplayMetrics().density;
-        return Math.round(value * density);
+            if (dialog.getWindow() != null) {
+                WindowManager.LayoutParams params = dialog.getWindow().getAttributes();
+                params.width = (int) (activity.getResources().getDisplayMetrics().widthPixels * 0.90f);
+                params.height = WindowManager.LayoutParams.WRAP_CONTENT;
+                dialog.getWindow().setAttributes(params);
+            }
+        });
     }
 }

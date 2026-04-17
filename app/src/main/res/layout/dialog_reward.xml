@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:padding="28dp"
+    android:background="@drawable/bg_reward_dialog">
+
+    <ImageView
+        android:id="@+id/ivRewardImage"
+        android:layout_width="160dp"
+        android:layout_height="160dp"
+        android:layout_marginBottom="16dp"
+        android:scaleType="fitCenter" />
+
+    <TextView
+        android:id="@+id/tvRewardTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Reward unlocked!"
+        android:textColor="#1F1A17"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:paddingBottom="8dp" />
+
+    <TextView
+        android:id="@+id/tvRewardMessage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="You completed 100% of your habits today. Amazing work!"
+        android:textColor="#6F5B5B"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:paddingBottom="20dp" />
+
+    <Button
+        android:id="@+id/btnRewardOk"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Yay!"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#2D6A4F" />
+
+</LinearLayout>
